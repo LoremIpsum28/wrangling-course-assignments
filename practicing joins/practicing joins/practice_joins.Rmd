@@ -1,6 +1,6 @@
 ---
 title: "Practicing joins"
-author: "Template: Ian Hussey; content: [Student name]"
+author: "Template: Ian Hussey; content: [Tim Schneeberger]"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
@@ -52,8 +52,8 @@ Using the data frames below and functions from the _join family, write code to d
 create 'data_combined' by joining data_amp_summary_subset and data_age_gender_subset so that unique_ids in either data frame are retained. which join is this? implement it. 
 
 ```{r}
-
-# data_combined <- 
+?join
+data_combined <- full_join(data_amp_summary_subset, data_age_gender_subset)
 
 ```
 
@@ -63,7 +63,7 @@ create 'data_self_reports_and_their_amp_data' by joining data_selfreport_summary
 
 ```{r}
 
-# data_self_reports_and_their_amp_data <- 
+data_self_reports_and_their_amp_data <- left_join(data_selfreport_summary_subset, data_amp_summary_subset, by = NULL)
 
 ```
 
@@ -73,7 +73,7 @@ do the opposite: create 'data_amp_data_and_their_self_reports' by joining data_a
 
 ```{r}
 
-# data_amp_data_and_their_self_reports <- 
+data_amp_data_and_their_self_reports <- left_join(data_amp_summary_subset, data_selfreport_summary_subset, by = NULL)
 
 ```
 
@@ -83,7 +83,7 @@ create data_combined_2 by joining 'data_combined' and data_selfreport_summary_su
 
 ```{r}
 
-# data_combined_2 <- 
+data_combined_2 <- inner_join(data_selfreport_summary_subset, data_combined, by = "unique_id")
 
 ```
 
@@ -93,8 +93,14 @@ create 'data_missing_ids' which should list the unique_ids are missing from data
 
 ```{r}
 
-# data_missing_ids <- 
+combined_ids <- data_age_gender_subset %>% 
+  full_join(data_amp_summary_subset, by = "unique_id") %>% 
+  full_join(data_selfreport_summary_subset, by = "unique_id")
 
+data_missing_ids <- combined_ids %>% 
+  anti_join(data_unique_id_subset, by = "unique_id")
+
+head(data_unique_id_subset)
 ```
 
 
