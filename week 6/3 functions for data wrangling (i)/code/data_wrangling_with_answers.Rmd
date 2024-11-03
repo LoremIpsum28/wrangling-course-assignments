@@ -381,6 +381,16 @@ identical(example_multiple_criteria_1, example_multiple_criteria_2)
 Filter the self reports data frame to remove the instructions. Filter the AMP data frame to remove the practice blocks and the instruction trials.
 
 ```{r}
+data_selfreport_without_instruction <- data_selfreport_trimmed %>% 
+  filter(item %in% c("positive", "prefer", "like"))
+rm(data_selfreport_without_instruction)
+
+data_amp_trimmed  %>% count(trial_type)
+
+data_amp_testtrials <- data_amp_trimmed %>% 
+  filter(block == "test" & trial_type != "instructions")
+
+
 
 data_selfreport_trials <- data_selfreport_trimmed %>%
   filter(item %in% c("positive", "prefer", "like"))
