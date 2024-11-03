@@ -167,7 +167,7 @@ How would you bring up the help menu to understand how `janitor::clean_names()` 
 Rewrite each of the below to use the pipe.
 
 ```{r}
-
+?clean_names
 data_demographics_clean_names <- clean_names(data_demographics_raw) 
 
 data_selfreport_clean_names <- clean_names(data_selfreport_raw) 
@@ -192,9 +192,13 @@ data_demographics_clean_names %>%
   dput()
 
 #data_selfreport_clean_names
-
+data_selfreport_clean_names %>%
+  colnames() %>%
+  dput()
 #data_amp_clean_names
-
+data_amp_clean_names %>%
+  colnames() %>%
+  dput()
 ```
 
 # Renaming columns 
