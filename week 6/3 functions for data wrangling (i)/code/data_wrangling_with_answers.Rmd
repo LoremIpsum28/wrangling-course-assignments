@@ -500,10 +500,20 @@ When analyzing cognitive behavioral tasks, it is common to employ mastery criter
 Try doing this with a simple logical test of whether latency < 100. You can do this with or without using the `ifelse()` function.
 
 ```{r}
+?ifelse
+data_fast_trial <- data_amp_test_trials %>% 
+  mutate(fast_trial = ifelse(latency < 100, NA, latency))
+
+
+
+
+
 
 data_amp_test_trials_with_fast_trials <- data_amp_test_trials %>%
   mutate(fast_trial = latency < 100)
 
+data_fast_trial %>% count(fast_trial)
+identical(data_fast_trial, data_amp_test_trials_with_fast_trials)
 ```
 
 ## Practice `mutate()` & learn `ifelse()`
@@ -515,22 +525,48 @@ What function could you use to first determine what values are present in this c
 In simple cases like this, you can use `mutate()` and `ifelse()` to change impossible values to `NA`. 
 
 ```{r}
+data_demographics_trimmed %>% 
+  select(item == "age") %>% 
+  count(response)
+
+
+
+
+
 
 # what values are present?
 data_demographics_trimmed %>%
   filter(item == "age") %>%
   count(response) 
 
+
 # fix them with mutate
+
+dat_age_tidied <- data_demographics_trimmed %>% 
+  filter(item == "age") %>% 
+  mutate(response = ifelse(response == "old", NA, response),
+         response = as.numeric(response)) %>% 
+  select(unique_id, age = response)
+  
+
+  
+  
+  
+
+
+
+
 data_demographics_age_tidy <- data_demographics_trimmed %>%
   filter(item == "age") %>%
   mutate(response = ifelse(response == "old", NA, response),
          response = as.numeric(response)) %>%
   select(unique_id, age = response) # note that you can rename inside a select call
 
+identical(dat_age_tidied, data_demographics_age_tidy)
 # check this has fixed the issue
 data_demographics_age_tidy %>%
-  count(age)
+  count(age) %>% 
+  arrange(desc(n))
 
 ```
 

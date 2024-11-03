@@ -139,6 +139,17 @@ Useful arguments:
 ```{r}
 
 # dplyr::filter()
+## Multiple criteria, 'and' or 'or' combinations
+
+#You can also have multiple criteria in your filter call, both of which have to be met (x `&` y), or either one of which have to be met (x `|` y). Bsp: 
+example_multiple_criteria_1 <- data_amp_trimmed %>%
+  filter(block != "test" & correct == 1)
+
+example_multiple_criteria_2 <- data_amp_trimmed %>%
+  filter(block != "test" | correct == 1)
+
+# note that these provide different results - make sure you understand why
+identical(example_multiple_criteria_1, example_multiple_criteria_2)
 
 ```
 
@@ -178,7 +189,23 @@ slice(mtcars, 2:n()) # this should have 31 rows
 ```{r}
 
 # dplyr::mutate()
-
+# clean up the gender variable
+data_demographics_gender_tidy_2 <- data_demographics_trimmed %>%
+  # filter only the gender item, not age
+  filter(item == "gender") %>%
+  # change the name of the response variable to what it now represents: gender
+  rename(gender = response) %>%
+  # change or remove weird responses to the gender question
+  mutate(gender = str_to_lower(gender),
+         gender = str_remove_all(gender, "[\\d.]"), # remove everything except letters
+         gender = na_if(gender, ""), 
+         gender = case_when(gender == "woman" ~ "female",
+                            gender == "man" ~ "male",
+                            gender == "girl" ~ "female",
+                            gender == "yes" ~ NA_character_,
+                            gender == "dude" ~ "male",
+                            gender == "non binary" ~ "non-binary",
+                            TRUE ~ gender)) %>%
 ```
 
 ## case_when
