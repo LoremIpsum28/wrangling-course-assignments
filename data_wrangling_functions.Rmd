@@ -213,7 +213,22 @@ data_demographics_gender_tidy_2 <- data_demographics_trimmed %>%
 ```{r}
 
 # dplyr::case_when() # instead of ifelse()
+#`case_when()` allows you to compare multiple logical tests or if-else tests.
 
+The AMP data needs to be reverse scored. Just like an item on a self-report that is worded negatively (e.g., most items: I am a good person; some items: I am a bad person), the negative prime trials have the opposite 'accuracy' values that they should. Use `mutate()` and `case_when()` to reverse score the negative prime trials, so that what was 0 is now 1 and what was 1 is now 0.
+
+```{r}
+
+data_amp_tidy <- data_amp_test_trials_with_fast_trials %>%
+  mutate(correct = case_when(trial_type == "prime_positive" ~ correct,
+                             trial_type == "prime_negative" & correct == 0 ~ 1,
+                             trial_type == "prime_negative" & correct == 1 ~ 0))
+
+# you can also specify a default value to return if none of the logical tests are passed with 'TRUE ~':
+data_amp_tidy <- data_amp_test_trials_with_fast_trials %>%
+  mutate(correct = case_when(trial_type == "prime_negative" & correct == 0 ~ 1,
+                             trial_type == "prime_negative" & correct == 1 ~ 0,
+                             TRUE ~ correct))
 ```
 
 ## summarize
@@ -221,7 +236,27 @@ data_demographics_gender_tidy_2 <- data_demographics_trimmed %>%
 ```{r}
 
 # dplyr::summarize() 
+# Summarizing across rows
 
+It is very common that we need to create summaries across rows. For example, to create the mean and standard deviation of a column like age. This can be done with `summarize()`. Remember: `mutate()` creates new columns or modifies the contents of existing columns, but does not change the number of rows. Whereas `summarize()` reduces a data frame down to one row.
+
+```{r}
+
+# mean
+data_demographics_age_tidy %>%
+  summarize(mean_age = mean(age, na.rm = TRUE))
+
+# SD
+data_demographics_age_tidy %>%
+  summarize(sd_age = sd(age, na.rm = TRUE))
+
+# mean and SD with rounding, illustrating how multiple summarizes can be done in one function call
+data_demographics_age_tidy %>%
+  summarize(mean_age = mean(age, na.rm = TRUE),
+            mean_age = round_half_up(mean_age, digits = 2),
+            sd_age = sd(age, na.rm = TRUE),
+            sd_age = round_half_up(sd_age, digits = 2))
+#gives you an output of the mean and the sd
 ```
 
 ## count

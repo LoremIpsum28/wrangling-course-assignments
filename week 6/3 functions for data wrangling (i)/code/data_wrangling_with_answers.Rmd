@@ -589,7 +589,20 @@ data_selfreport_trials %>%
 # what type of data is the response column?
 class(data_selfreport_trials$response)
 
+
 # remove non Likert values
+data_selfreport_tidied <- data_selfreport_trials %>% 
+  mutate(response = ifelse(response %in% c("1","2","3","4","5","6","7"),response, NA),
+         response = as.numeric(response))
+
+
+
+
+
+
+
+
+
 data_selfreport_tidy <- data_selfreport_trials %>%
   mutate(response = ifelse(response %in% c("1", "2", "3", "4", "5", "6", "7"), response, NA),
          response = as.numeric(response))
