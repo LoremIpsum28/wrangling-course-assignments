@@ -279,6 +279,8 @@ data_amp_trimmed <- read_csv("../data/raw/data_amp_raw.csv") %>%
 After renaming and selecting columns, we know what columns we have. But what rows do we have in each of these? What might we need to exclude, change, work with in some way later on? It is very useful to use `count()` to obtain the frequency of each unique value of a given column
 
 ```{r}
+data_demographics_trimmed %>% 
+  count(item)
 
 data_demographics_trimmed %>%
   count(item)
