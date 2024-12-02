@@ -24,7 +24,6 @@ knitr::opts_chunk$set(message = FALSE,
 # disable scientific notation
 options(scipen = 999) 
 
-dir.create("plots")
 
 ```
 
@@ -35,10 +34,12 @@ dir.create("plots")
 library(dplyr)
 library(tidyr)
 library(tibble)
+devtools::install_github("debruine/faux")
 library(faux)
 library(janitor)
 library(ggplot2)
 library(scales)
+install.packages("psych")
 library(psych)
 library(readr)
 library(knitr)
@@ -181,8 +182,21 @@ data_item_and_sum_scores <- data_wide_again %>%
 Wrangle the demographics data included in this exercise more efficiently by reshaping it into wide format. Before, we used filter() to wrangle the age and gender data separately.
 
 ```{r}
+data_processed <- read_csv("C:/Users/timsc/Documents/GitHub/wrangling-course-assignments/week 8/intro to visualisation using ggplot/data/processed/data_processed.csv")
 
+data_long <- data_wide_likert %>%
+  pivot_longer(cols = starts_with("item_"),
+               names_to = "item",
+               values_to = "response")
 
+data_processed_long <- data_processed %>%
+  mutate(across(c(age), as.character)) %>%
+  pivot_longer(cols = c(age, gender),
+               names_to = "genderage",
+               values_to = "score") %>% 
+mutate("age", as.numeric))
+  
+  rm(data_processed_long)
 
 ```
 
