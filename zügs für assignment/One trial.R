@@ -1,17 +1,3 @@
----
-title: "assignment"
-author: "Complab"
-date: "2025-02-07"
-output: html_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-#
-
-```{r}
 library(tidyverse)
 
 # Set seed for reproducibility
@@ -19,27 +5,13 @@ set.seed(42)
 
 # Define sample sizes
 n_control <- 27 #no treatment group
-n_SUS <- 32 #groups that receives the flashy new "Symptom Untangling Session" or "SUS"
-n_CBT <- 28 #good old CBT
-n_total <- n_control + n_SUS + n_CBT
+n_sus <- 32 #groups that receives the flashy new "Symptom Untangling Session" or "SUS"
+n_cbt <- 28 #good old CBT
+n_total <- n_control + n_sus + n_cbt
 
 # Define measurement points (every 3rd session, plus 6-month follow-up)
 time_points <- c(1, 4, 7, 10, 13, 16, 19, 21, "6 Month Follow-Up")
 
-# Create participant-level data with biased assignment
-depression_data <- tibble(
-  participant_id = 1:n_total,
-  group = c(
-    rep("Control", n_control), 
-    rep("SUS", n_SUS), 
-    rep("CBT", n_CBT)
-  ),
-  baseline_BDI = c(
-    rnorm(n_control, mean = 22, sd = 5), # Medium severity in control
-    rnorm(n_SUS, mean = 35, sd = 7),     # Severe cases sorted into SUS
-    rnorm(n_CBT, mean = 15, sd = 4)      # Mild cases sorted into CBT
-  )
-) 
 # Generate participant IDs
 control_ids <- paste0("C", 1:n_control)
 SUS_ids <- paste0("S", 1:n_SUS)
@@ -66,9 +38,31 @@ long_depression_data <- depression_data %>%
     ),
     BDI_score = baseline_BDI + change_factor + rnorm(n(), mean = 0, sd = 2) # Add random variation
   ) 
-```
+control_data <- map2_dfr(control_ids, initial_control, ~ tibble(
+  participant_id = .x,
+  group = "Control",
+  time = time_points,
+  BDI_score = generate_bdi_scores(.y, time_points, decline_control[match(.x, control_ids)])
+))
 
-```{r}
+SUS_data <- map2_dfr(SUS_ids, initial_SUS, ~ tibble(
+  participant_id = .x,
+  group = "SUS",
+  time = time_points,
+  BDI_score = generate_bdi_scores(.y, time_points, decline_SUS[match(.x, SUS_ids)])
+))
+
+CBT_data <- map2_dfr(CBT_ids, initial_CBT, ~ tibble(
+  participant_id = .x,
+  group = "CBT",
+  time = time_points,
+  BDI_score = generate_bdi_scores(.y, time_points, decline_CBT[match(.x, CBT_ids)])
+))
+
+# Combine all groups into a single dataset
+long_depression_data <- bind_rows(control_data, SUS_data, CBT_data)
+
+
 #calculate each participant's BDI change relative to their own baseline to hide 
 #the different starting points in average depression scores for each group
 long_depression_data <- long_depression_data %>%
@@ -86,8 +80,5 @@ ggplot(long_depression_data, aes(x = factor(time), y = relative_BDI, fill = fact
   scale_fill_manual(values = c("Control" = "#1f77b4", "CBT" = "#ff7f0e", "SUS" = "#2ca02c")) +  
   scale_x_discrete(labels = as.character(time_points)) +  # time points were weird so chatGPT helped
   theme(legend.title = element_blank())  #remove the legend title
-```
 
 
-
-I got kinda lost in trying to get the data I imagined and forgot that the assignment was primarily about visualizing data (in a bad way). In my opinion, a really bad graph (or in other words, a graph that might have negative consequences of some sort) is not one that is just annoying or confusing to look at or has parts because of layering issues, but rather one with an agenda behind. Where the agenda is not to best inform a viewer about some findings but to push a narrative where someone stands to gain something. I tried to implement that here by "designing" data where participants were preselected into groups and the resulting graph aims to hide that fact. To make it seem like in a honest comparison between a reliable treatment method and a new method, the new method is promising, has a "Daseinsberechtigung" and is not just some old treatment methode repackaged to gather some citations and move on. 
