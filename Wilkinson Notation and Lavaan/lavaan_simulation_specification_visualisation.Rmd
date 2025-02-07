@@ -1,0 +1,298 @@
+---
+title: "Demonstration of collider bias as a form of model misspecification"
+author: "Ian Hussey"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    code_folding: show
+    highlight: haddock
+    theme: flatly
+    toc: yes
+    toc_float: yes
+---
+
+```{r, include=FALSE}
+
+# set default chunk options
+knitr::opts_chunk$set(message = FALSE,
+                      warning = FALSE)
+
+# disable scientific notation
+options(scipen = 999) 
+
+```
+
+```{r}
+
+# dependencies
+library(tidyr)
+library(dplyr)
+library(purrr) 
+library(lavaan)
+library(semPlot)
+library(knitr)
+library(kableExtra)
+library(parameters)
+
+```
+
+# Collider population analyzed with independent effects (multiple regression) analysis
+
+## Plots
+
+Data generating process vs. model used in analysis
+
+```{r fig.height=6, fig.width=7}
+
+# collider
+mod_collider <- "M ~ X + Y; Y ~ X"
+
+layout_matrix <- matrix(c( 0,  1,
+                           1,  0,
+                          -1,  0), 
+                        ncol = 2, 
+                        byrow = TRUE)
+
+lavaan::simulateData(model = mod_collider, sample.nobs = 100) %>%
+  sem(model = mod_collider, data = .) |>
+  semPaths(whatLabels = "diagram", 
+           layout = layout_matrix, 
+           residuals = FALSE,
+           edge.label.cex = 1.2, 
+           sizeMan = 10)
+title(main = "Data generating process in the population: Collider", adj = 0)
+
+
+
+# independent effects (multiple regression)
+mod_independenteffects    <- "Y ~ X + M" 
+
+layout_matrix <- matrix(c( 1,  0,
+                          -1,  0,
+                           0,  1), 
+                        ncol = 2, 
+                        byrow = TRUE)
+
+lavaan::simulateData(model = mod_independenteffects, sample.nobs = 100) %>%
+  sem(model = mod_independenteffects, data = .) |>
+  semPaths(whatLabels = "diagram", 
+           layout = layout_matrix, 
+           residuals = FALSE,
+           edge.label.cex = 1.2, 
+           sizeMan = 10)
+title(main = "Model used in analysis: independent effects (multiple regression)", adj = 0)
+
+```
+
+## Simulate
+
+```{r}
+
+# define data generating process ----
+generate_data <- function(population_model, n) {
+  
+  data <- lavaan::simulateData(model = population_model, sample.nobs = n) |>
+    mutate(id = row_number())
+    
+  return(data)
+}
+
+# define analysis ----
+# extract the regression estimate for y ~ x
+# nb requires that analysis_model includes a y ~ x effect
+analyse <- function(data, analysis_model){
+
+  # fit model
+  fit <- sem(model = analysis_model, data = data)
+  
+  # extract results
+  results <- fit |>
+    parameters() |>
+    as_tibble() |>
+    filter(To == "Y" & From == "X") |>
+    dplyr::select(estimate_yx = Coefficient, p_yx = p)
+  
+  return(results)
+}
+
+# run simulation ----
+simulation <- 
+  # define simulation conditions
+  tibble(n = 200,
+         population_model = "M ~ 0.5*X + 0.5*Y; Y ~~ 0.0*X",
+         population_label = "collider",
+         population_yx = 0,
+         analysis_model = "Y ~ X + M", 
+         analysis_label = "independent effects (multiple regression)") |>
+  expand_grid(iteration = 1:1000) |>
+  # for each one, generate data
+  mutate(data = pmap(list(population_model, n), generate_data)) |>
+  # for each dataset, analyze it
+  mutate(results = pmap(list(data, analysis_model), analyse)) 
+
+# summarize across iterations ----
+simulation_summary <- simulation |>
+  unnest(results) |>
+  group_by(population_label, analysis_label, population_yx) |>
+  summarize(mean_estimate_yx = mean(estimate_yx), 
+            proportion_significant = mean(p_yx < .05),
+            .groups = "drop")
+
+# print table of results
+simulation_summary |>
+  mutate_if(is.numeric, janitor::round_half_up, digits = 2) |>
+  kable() |>
+  kable_classic(full_width = FALSE)
+
+```
+
+# Collider population analyzed with mediation analysis
+
+## Plots
+
+Data generating process vs. model used in analysis
+
+```{r fig.height=6, fig.width=7}
+
+# collider
+mod_collider <- "M ~ X + Y; Y ~ X"
+
+layout_matrix <- matrix(c( 0,  1,
+                           1,  0,
+                          -1,  0), 
+                        ncol = 2, 
+                        byrow = TRUE)
+
+lavaan::simulateData(model = mod_collider, sample.nobs = 100) %>%
+  sem(model = mod_collider, data = .) |>
+  semPaths(whatLabels = "diagram", 
+           layout = layout_matrix, 
+           residuals = FALSE,
+           edge.label.cex = 1.2, 
+           sizeMan = 10)
+title(main = "Data generating process in the population: Collider", adj = 0)
+
+
+
+# mediation
+mod_mediation <- "Y ~ M + X; M ~ X"
+
+layout_matrix <- matrix(c( 1,  0,
+                           0,  1,
+                          -1,  0), 
+                        ncol = 2, 
+                        byrow = TRUE)
+
+lavaan::simulateData(model = mod_mediation, sample.nobs = 100) %>%
+  sem(model = mod_mediation, data = .) |>
+  semPaths(whatLabels = "diagram", 
+           layout = layout_matrix, 
+           residuals = FALSE,
+           edge.label.cex = 1.2, 
+           sizeMan = 10)
+title(main = "Model used in analysis: mediation", adj = 0)
+
+
+
+# mediation reversed
+mod_mediation <- "X ~ M + Y; M ~ Y"
+
+layout_matrix <- matrix(c(-1,  0,
+                           0,  1,
+                           1,  0), 
+                        ncol = 2, 
+                        byrow = TRUE)
+
+lavaan::simulateData(model = mod_mediation, sample.nobs = 100) %>%
+  sem(model = mod_mediation, data = .) |>
+  semPaths(whatLabels = "diagram", 
+           layout = layout_matrix, 
+           residuals = FALSE,
+           edge.label.cex = 1.2, 
+           sizeMan = 10)
+title(main = "Other possible models: reverse mediation", adj = 0)
+
+```
+
+## Simulate
+
+```{r}
+
+# define data generating process ----
+generate_data <- function(population_model, n) {
+  
+  data <- lavaan::simulateData(model = population_model, sample.nobs = n) |>
+    mutate(id = row_number())
+    
+  return(data)
+}
+
+# define analysis ----
+# extract the regression estimate for y ~ x
+# nb requires that analysis_model includes a y ~ x effect
+analyse <- function(data, analysis_model){
+
+  # fit model
+  fit <- sem(model = analysis_model, data = data)
+  
+  # extract results
+  results <- fit |>
+    parameters() |>
+    as_tibble() |>
+    filter(To == "Y" & From == "X") |>
+    dplyr::select(estimate_yx = Coefficient, p_yx = p)
+  
+  return(results)
+}
+
+# run simulation ----
+simulation <- 
+  # define simulation conditions
+  tibble(n = 200,
+         population_model = "M ~ 0.5*X + 0.5*Y; Y ~~ 0.0*X",
+         population_label = "collider",
+         population_yx = 0,
+         analysis_model = "Y ~ M + X; M ~ X", 
+         analysis_label = "mediation") |>
+  expand_grid(iteration = 1:1000) |>
+  # for each one, generate data
+  mutate(data = pmap(list(population_model, n), generate_data)) |>
+  # for each dataset, analyze it
+  mutate(results = pmap(list(data, analysis_model), analyse)) 
+
+# summarize across iterations ----
+simulation_summary <- simulation |>
+  unnest(results) |>
+  group_by(population_label, analysis_label, population_yx) |>
+  summarize(mean_estimate_yx = mean(estimate_yx), 
+            proportion_significant = mean(p_yx < .05),
+            .groups = "drop")
+
+# print table of results
+simulation_summary |>
+  mutate_if(is.numeric, janitor::round_half_up, digits = 2) |>
+  kable() |>
+  kable_classic(full_width = FALSE)
+
+```
+
+# Extensions
+
+- What more complex multivariable regression models do you use in your research or do you observe in the literature? 
+- What is the causal justification for their structure? [hard question]
+- Try to implement such a model in lavaan syntax to generate data for it. For example, add other continuous covariates such as age or SES or other psycholgical variables. 
+- What impact does changing the causal structure among them have on the results you observe? [hard question]
+
+# Further reading
+
+Craig Seawall has an excellent [twitter thread](https://x.com/cjsewall9/status/1782398602071114047) and [article](https://doi.org/10.1037/abn0000950) on how an over simplified and poorly specified theory can generate spurious and artifact results. For example, a poor understanding of the broader causal structure can make it appear as if social media and gender interact to cause poor mental health, when this is not the case.
+
+# Session info
+
+```{r}
+
+sessionInfo()
+
+```
+
+

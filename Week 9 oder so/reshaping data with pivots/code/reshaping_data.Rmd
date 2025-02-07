@@ -193,9 +193,12 @@ data_processed_long <- data_processed %>%
   mutate(across(c(age), as.character)) %>%
   pivot_longer(cols = c(age, gender),
                names_to = "genderage",
-               values_to = "score") %>% 
-mutate("age", as.numeric))
-  
+               values_to = "score")
+
+test <- data_processed_long %>% 
+  select(unique_id, genderage, score) %>% 
+  group_by("gender")
+
   rm(data_processed_long)
 
 ```
