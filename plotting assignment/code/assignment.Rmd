@@ -9,64 +9,69 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-#
+#Dependencies
 
 ```{r}
 library(tidyverse)
+library(ggridges)
+library(scales)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
 
-# Set seed for reproducibility
+#Generating Data for Bad Plot
+
+```{r}
+
 set.seed(42)
 
 # Define sample sizes
-n_control <- 27 #no treatment group
-n_SUS <- 32 #groups that receives the flashy new "Symptom Untangling Session" or "SUS"
-n_CBT <- 28 #good old CBT
+n_control <- 27
+n_SUS <- 32
+n_CBT <- 28
 n_total <- n_control + n_SUS + n_CBT
 
 # Define measurement points (every 3rd session, plus 6-month follow-up)
 time_points <- c(1, 4, 7, 10, 13, 16, 19, 21, "6 Month Follow-Up")
 
-# Create participant-level data with biased assignment
+# Create participant-level data
 depression_data <- tibble(
   participant_id = 1:n_total,
-  group = c(
-    rep("Control", n_control), 
-    rep("SUS", n_SUS), 
-    rep("CBT", n_CBT)
-  ),
+  group = c(rep("Control", n_control), rep("SUS", n_SUS), rep("CBT", n_CBT)),
   baseline_BDI = c(
-    rnorm(n_control, mean = 22, sd = 5), # Medium severity in control
-    rnorm(n_SUS, mean = 35, sd = 7),     # Severe cases sorted into SUS
-    rnorm(n_CBT, mean = 15, sd = 4)      # Mild cases sorted into CBT
+    rnorm(n_control, mean = 22, sd = 5),
+    rnorm(n_SUS, mean = 35, sd = 7),
+    rnorm(n_CBT, mean = 15, sd = 4)
   )
-) 
-# Generate participant IDs
-control_ids <- paste0("C", 1:n_control)
-SUS_ids <- paste0("S", 1:n_SUS)
-CBT_ids <- paste0("T", 1:n_CBT)
+)
 
-# Function to generate individual BDI score trajectories
-generate_bdi_scores <- function(start_bdi, time_points, decline_rate) {
-  # Create a decreasing trajectory with some random noise
-  return(start_bdi - (decline_rate * time_points) + rnorm(length(time_points), 0, 2))
-}
-# Generate depression scores for each session
+```
+
+
+#Wrangling
+
+```{r}
 long_depression_data <- depression_data %>%
   expand(participant_id, time = time_points) %>%
   left_join(depression_data, by = "participant_id") %>%
   mutate(
-    time = factor(time, levels = time_points),  # Ensure time is ordered correctly
-    session_number = as.numeric(as.character(time)),  # Convert to numeric where possible
-    session_number = replace_na(session_number, max(session_number, na.rm = TRUE) + 3),  # Set follow-up session correctly
+    time = factor(time, levels = time_points),
+    session_number = case_when(
+  time == "6 Month Follow-Up" ~ max(parse_number(as.character(time_points)), na.rm = TRUE) + 3,
+  TRUE ~ parse_number(as.character(time))
+),
     change_factor = case_when(
-      group == "Control" ~ -5 * (session_number / max(session_number)),  # Slight improvement
-      group == "CBT" ~ -10 * (session_number / max(session_number)),     # Moderate improvement
-      group == "SUS" ~ -15 * (session_number / max(session_number)),     # Biggest improvement
-     
+      group == "Control" ~ -5 * (session_number / max(session_number, na.rm = TRUE)),
+      group == "CBT" ~ -10 * (session_number / max(session_number, na.rm = TRUE)),
+      group == "SUS" ~ -15 * (session_number / max(session_number, na.rm = TRUE))
     ),
-    BDI_score = baseline_BDI + change_factor + rnorm(n(), mean = 0, sd = 2) # Add random variation
-  ) 
+    BDI_score = baseline_BDI + change_factor + rnorm(n(), mean = 0, sd = 2)
+  )
+
+
 ```
+#Data wrangling (in the slightest sense)
 
 ```{r}
 #calculate each participant's BDI change relative to their own baseline to hide 
@@ -75,6 +80,15 @@ long_depression_data <- long_depression_data %>%
   group_by(participant_id) %>%
   mutate(relative_BDI = BDI_score - first(BDI_score)) %>%
   ungroup()
+
+```
+
+#Plots
+
+##Bad plot
+```{r}
+
+#Plotting the generated data
 
 ggplot(long_depression_data, aes(x = factor(time), y = relative_BDI, fill = factor(group, levels = c("Control", "CBT", "SUS")))) +
   stat_summary(fun = mean, geom = "bar", position = "dodge", width = 0.7) +  # Bar plot with dodge for side-by-side comparison to make SUS look better
@@ -86,8 +100,98 @@ ggplot(long_depression_data, aes(x = factor(time), y = relative_BDI, fill = fact
   scale_fill_manual(values = c("Control" = "#1f77b4", "CBT" = "#ff7f0e", "SUS" = "#2ca02c")) +  
   scale_x_discrete(labels = as.character(time_points)) +  # time points were weird so chatGPT helped
   theme(legend.title = element_blank())  #remove the legend title
+
+
+
 ```
 
 
 
 I got kinda lost in trying to get the data I imagined and forgot that the assignment was primarily about visualizing data (in a bad way). In my opinion, a really bad graph (or in other words, a graph that might have negative consequences of some sort) is not one that is just annoying or confusing to look at or has parts because of layering issues, but rather one with an agenda behind. Where the agenda is not to best inform a viewer about some findings but to push a narrative where someone stands to gain something. I tried to implement that here by "designing" data where participants were preselected into groups and the resulting graph aims to hide that fact. To make it seem like in a honest comparison between a reliable treatment method and a new method, the new method is promising, has a "Daseinsberechtigung" and is not just some old treatment methode repackaged to gather some citations and move on. 
+
+
+#Plots 
+##Potentially more honest (but still not very intuitive) plot
+
+```{r}
+
+library(ggridges)
+
+ggplot(long_depression_data, aes(x = BDI_score, y = factor(time), fill = group)) +
+  geom_density_ridges(alpha = 0.7) +
+  scale_x_reverse() +  # Reverse BDI Score axis
+  labs(title = "BDI Score Distributions over Sessions",
+       x = "BDI Score",
+       y = "Time (in Therapy sessions)") +
+  theme_minimal()
+
+
+```
+
+To make a good plot with this data turned out to be pretty difficult as I had been tinkering with the data generation a bit too much for it to be useful or realistic. So I tried a different approach with a new (once again, generated) dataset.
+
+
+
+
+
+#Generating data for good plot
+
+My aim here was to make a better visualization for the viral "Conservatives vs. liberals heatmap" (or probably more accurately named the "liberals prefer rocks over their own family-study"). I struggled quite a bit and I'm not perfectly happy with the result (mainly because I realized that the visualization of the study was absolutely fine if only people read the description, not of the heatmap itself but the one in the study). So, the realistic correction would have been to just add a comment that every lower option was automatically included when choosing a number higher than 1. And people will interpret whatever fits their agenda, anyways. But I tried anyway to make it easier to interpret within a first glance.
+
+```{r}
+
+
+# Set seed for reproducibility
+set.seed(42)
+n <- 500
+
+moral_data <- tibble(
+  id = 1:n,
+  ideology = sample(c("Conservative", "Liberal"), n, replace = TRUE, prob = c(0.5, 0.5)), #make 2 groups
+  highest_allocation = ifelse(
+    ideology == "Conservative",
+    sample(1:7, n, replace = TRUE, prob = c(0.1, 0.15, 0.25, 0.3, 0.15, 0.05, 0.02)), #allocate 3-4 as the median for conservatives, as I think it was in the study)
+    sample(1:15, n, replace = TRUE, prob = c(0.02, 0.03, 0.05, 0.07, 0.08, 0.1, 0.1, 0.08, 0.07, 0.07, 0.08, 0.1, 0.06, 0.05, 0.04))
+  )
+)
+
+# Create cumulative inclusion
+moral_cumulative <- moral_data %>%
+  group_by(ideology, highest_allocation) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  complete(ideology, highest_allocation = 1:15, fill = list(count = 0)) %>%
+  arrange(ideology, highest_allocation) %>%
+  group_by(ideology) %>%
+  mutate(cumulative_count = cumsum(count),
+         percent_included = cumulative_count / max(cumulative_count))
+
+# Calculate cumulative inclusion: Everyone starting at 100% (as every option beforehand is included automatically)
+moral_cumulative <- moral_data %>%
+  arrange(ideology, highest_allocation) %>%
+  group_by(ideology, highest_allocation) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  mutate(cumulative_count = rev(cumsum(rev(count)))) %>%  # Reverse cumulative sum (i struggled a long time with the fading not working as intended, so chatGPT helped out in the end)
+  group_by(ideology) %>%
+  mutate(cumulative_prop = cumulative_count / max(cumulative_count))  # Normalize to 1 for percentage
+
+
+```
+
+##Good Plot
+
+```{r}
+# plot with fading
+ggplot(moral_cumulative, aes(x = factor(highest_allocation), y = ideology, fill = cumulative_prop)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "blue") +
+  labs(title = "Moral Inclusion Heatmap",
+       x = "Moral Inclusion Level",
+       y = "Ideology",
+       fill = "Proportion Still Including") +
+  theme_minimal()
+
+```
+
+
+
+So I hoped that making it clear that everything bevore the selected number is included should make it easier to interpret correctly. 
