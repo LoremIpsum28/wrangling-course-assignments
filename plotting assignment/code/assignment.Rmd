@@ -136,7 +136,12 @@ To make a good plot with this data turned out to be pretty difficult as I had be
 
 #Generating data for good plot
 
-My aim here was to make a better visualization for the viral "Conservatives vs. liberals heatmap" (or probably more accurately named the "liberals prefer rocks over their own family-study"). I struggled quite a bit and I'm not perfectly happy with the result (mainly because I realized that the visualization of the study was absolutely fine if only people read the description, not of the heatmap itself but the one in the study). So, the realistic correction would have been to just add a comment that every lower option was automatically included when choosing a number higher than 1. And people will interpret whatever fits their agenda, anyways. But I tried anyway to make it easier to interpret within a first glance.
+My aim here was to make a better visualization for the viral "Conservatives vs. liberals heatmap" (or probably more accurately named the "liberals prefer rocks over their own family-study"). This one: https://pmc.ncbi.nlm.nih.gov/articles/PMC6763434/ or doi: 10.1038/s41467-019-12227-0
+this is the figure im talking about: https://pmc.ncbi.nlm.nih.gov/articles/PMC6763434/figure/Fig5/
+
+
+
+I struggled quite a bit and I'm not perfectly happy with the result (mainly because I realized that the visualization of the study was absolutely fine if only people read the description, not of the heatmap itself but the one in the study). So, the realistic correction would have been to just add a comment that every lower option was automatically included when choosing a number higher than 1. And people will interpret whatever fits their agenda, anyways. But I tried anyway to make it easier to interpret within a first glance.
 
 ```{r}
 
